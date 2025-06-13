@@ -8,8 +8,12 @@ include(cmake/common.cmake)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 file(GLOB tink_protos "${CMAKE_CURRENT_SOURCE_DIR}/investAPI/src/docs/contracts/*.proto")
+file(GLOB google_api_protos "${CMAKE_CURRENT_SOURCE_DIR}/investAPI/src/docs/contracts/google/api/*.proto")
 
-foreach (tink_proto ${tink_protos})
+# Combine all proto files
+set(all_protos ${tink_protos} ${google_api_protos})
+
+foreach (tink_proto ${all_protos})
     get_filename_component(tink_proto_path "${tink_proto}" PATH)
     file(GLOB tinkoff_proto_files "${tink_proto}")
     string(REPLACE ${tink_proto_path} ${CMAKE_CURRENT_BINARY_DIR} OUTPUT_FILE_NAMES "${tinkoff_proto_files}")
@@ -29,6 +33,7 @@ foreach (tink_proto ${tink_protos})
                 --proto_path ${CMAKE_BINARY_DIR}/_deps/grpc-src/third_party/protobuf/src
                 --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
                 -I "${tink_proto_path}"
+                -I "${CMAKE_CURRENT_SOURCE_DIR}/investAPI/src/docs/contracts"
                 --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
                 "${tink_proto}"
               COMMAND powershell "((Get-Content -path ${OUTPUT_PB_SOURCE} -Raw) -replace '${str1}','${repl1}') | Set-Content -Path ${OUTPUT_PB_SOURCE}"
@@ -48,6 +53,7 @@ foreach (tink_proto ${tink_protos})
                 --proto_path ${CMAKE_BINARY_DIR}/_deps/grpc-src/third_party/protobuf/src
                 --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
                 -I "${tink_proto_path}"
+                -I "${CMAKE_CURRENT_SOURCE_DIR}/investAPI/src/docs/contracts"
                 --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
                 "${tink_proto}"
               COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fix_keywords.sh ${OUTPUT_PB_SOURCE} ${OUTPUT_PB_HEADER} ${OUTPUT_GRPC_SOURCE} ${OUTPUT_GRPC_HEADER}
