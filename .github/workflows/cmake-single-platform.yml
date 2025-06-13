@@ -25,6 +25,10 @@ jobs:
     - name: update and upgrade apt packages
       run: sudo apt-get update && sudo apt-get upgrade -y
 
+    - name: install dependencies
+      run: sudo apt-get instakll -y build-essential cmake autoconf libtool pkg-config libgrpc++-dev \
+        libprotobuf-dev protobuf-compiler-grpc protobuf-compiler
+
     - name: Get investAPI
       run: git submodule update --init --recursive --remote --merge
 
