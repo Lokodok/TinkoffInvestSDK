@@ -21,129 +21,34 @@ cmake_minimum_required(VERSION 3.10)
 
 set (CMAKE_CXX_STANDARD 11)
 
-if(MSVC)
-  add_definitions(-D_WIN32_WINNT=0x600)
+find_package(Threads REQUIRED)
+# Find Protobuf installation
+find_package(Protobuf REQUIRED)
+message(STATUS "Using protobuf ${Protobuf_VERSION}")
+
+set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
+if(CMAKE_CROSSCOMPILING)
+  find_program(_PROTOBUF_PROTOC protoc)
+else()
+  set(_PROTOBUF_PROTOC protobuf::protoc)
 endif()
 
-find_package(Threads REQUIRED)
-
-set(GRPC_AS_SUBMODULE false)
-set(GRPC_FETCHCONTENT false)
-
-if(GRPC_AS_SUBMODULE)
-  # One way to build a projects that uses gRPC is to just include the
-  # entire gRPC project tree via "add_subdirectory".
-  # This approach is very simple to use, but the are some potential
-  # disadvantages:
-  # * it includes gRPC's CMakeLists.txt directly into your build script
-  #   without and that can make gRPC's internal setting interfere with your
-  #   own build.
-  # * depending on what's installed on your system, the contents of submodules
-  #   in gRPC's third_party/* might need to be available (and there might be
-  #   additional prerequisites required to build them). Consider using
-  #   the gRPC_*_PROVIDER options to fine-tune the expected behavior.
-  #
-  # A more robust approach to add dependency on gRPC is using
-  # cmake's ExternalProject_Add (see cmake_externalproject/CMakeLists.txt).
-
-  # Include the gRPC's cmake build (normally grpc source code would live
-  # in a git submodule called "third_party/grpc", but this example lives in
-  # the same repository as gRPC sources, so we just look a few directories up)
-  add_subdirectory(../../.. ${CMAKE_CURRENT_BINARY_DIR}/grpc EXCLUDE_FROM_ALL)
-  message(STATUS "Using gRPC via add_subdirectory.")
-
-  # After using add_subdirectory, we can now use the grpc targets directly from
-  # this build.
-  set(_PROTOBUF_LIBPROTOBUF libprotobuf)
-  set(_REFLECTION grpc++_reflection)
-  if(CMAKE_CROSSCOMPILING)
-    find_program(_PROTOBUF_PROTOC protoc)
-  else()
-    set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
-  endif()
-  set(_GRPC_GRPCPP grpc++)
-  if(CMAKE_CROSSCOMPILING)
-    find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
-  else()
-    set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
-  endif()
-elseif(GRPC_FETCHCONTENT)
-  # Another way is to use CMake's FetchContent module to clone gRPC at
-  # configure time. This makes gRPC's source code available to your project,
-  # similar to a git submodule.
-  message(STATUS "Using gRPC via add_subdirectory (FetchContent).")
-  include(FetchContent)
+# Find gRPC installation
+# For Ubuntu 22.04, use pkg-config to find gRPC
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GRPC REQUIRED grpc++)
+pkg_check_modules(GRPC_CPP REQUIRED grpc++)
   
-  # Fetch Abseil first as it's required by gRPC
-  FetchContent_Declare(
-    absl
-    GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-    GIT_TAG        20240722.0
-  )
-  
-  FetchContent_Declare(
-    grpc
-    GIT_REPOSITORY https://github.com/grpc/grpc.git
-    # when using gRPC, you will actually set this to an existing tag, such as
-    # v1.25.0, v1.26.0 etc..
-    # For the purpose of testing, we override the tag used to the commit
-    # that's currently under test.
-     GIT_TAG        v1.73.0)
-     
-  # Set options for gRPC to use fetched dependencies
-  set(gRPC_ABSL_PROVIDER "package" CACHE STRING "Provider of absl library")
-  set(gRPC_ZLIB_PROVIDER "package" CACHE STRING "Provider of zlib library")
-  set(gRPC_CARES_PROVIDER "package" CACHE STRING "Provider of c-ares library")
-  set(gRPC_RE2_PROVIDER "package" CACHE STRING "Provider of re2 library")
-  set(gRPC_SSL_PROVIDER "package" CACHE STRING "Provider of ssl library")
-  set(gRPC_PROTOBUF_PROVIDER "package" CACHE STRING "Provider of protobuf library")
-  
-  FetchContent_MakeAvailable(absl grpc)
+message(STATUS "Using gRPC from pkg-config")
 
-  # Since FetchContent uses add_subdirectory under the hood, we can use
-  # the grpc targets directly from this build.
-  set(_PROTOBUF_LIBPROTOBUF libprotobuf)
-  set(_REFLECTION grpc++_reflection)
-  set(_PROTOBUF_PROTOC $<TARGET_FILE:protoc>)
-  set(_GRPC_GRPCPP grpc++)
-  if(CMAKE_CROSSCOMPILING)
-    find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
-  else()
-    set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
-  endif()
-else()
-  # This branch assumes that gRPC and all its dependencies are already installed
-  # on this system, so they can be located by find_package().
-
-  # Find Protobuf installation
-  # Use the module mode instead of config mode for Ubuntu compatibility
-  find_package(Protobuf REQUIRED)
-  message(STATUS "Using protobuf ${Protobuf_VERSION}")
-
-  set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
-  if(CMAKE_CROSSCOMPILING)
-    find_program(_PROTOBUF_PROTOC protoc)
-  else()
-    set(_PROTOBUF_PROTOC protobuf::protoc)
-  endif()
-
-  # Find gRPC installation
-  # For Ubuntu 22.04, use pkg-config to find gRPC
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(GRPC REQUIRED grpc++)
-  pkg_check_modules(GRPC_CPP REQUIRED grpc++)
+# For system-installed gRPC, we need to find the libraries manually
+find_library(GRPC_GRPCPP_LIBRARY NAMES grpc++ REQUIRED)
+find_library(GRPC_REFLECTION_LIBRARY NAMES grpc++_reflection REQUIRED)
   
-  message(STATUS "Using gRPC from pkg-config")
-
-  # For system-installed gRPC, we need to find the libraries manually
-  find_library(GRPC_GRPCPP_LIBRARY NAMES grpc++ REQUIRED)
-  find_library(GRPC_REFLECTION_LIBRARY NAMES grpc++_reflection REQUIRED)
+set(_GRPC_GRPCPP ${GRPC_GRPCPP_LIBRARY})
+set(_REFLECTION ${GRPC_REFLECTION_LIBRARY})
   
-  set(_GRPC_GRPCPP ${GRPC_GRPCPP_LIBRARY})
-  set(_REFLECTION ${GRPC_REFLECTION_LIBRARY})
-  
-  find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
-  if(NOT _GRPC_CPP_PLUGIN_EXECUTABLE)
-    message(FATAL_ERROR "grpc_cpp_plugin not found")
-  endif()
+find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
+if(NOT _GRPC_CPP_PLUGIN_EXECUTABLE)
+  message(FATAL_ERROR "grpc_cpp_plugin not found")
 endif()
