@@ -58,7 +58,7 @@ jobs:
         cp build/*.h artifacts/include/ 2>/dev/null || true
         # Create a summary of what was built
         echo "Build completed on $(date)" > artifacts/build-info.txt
-        echo "Platform: ubuntu-22.04" >> artifacts/build-info.txt
+        echo "Platform: ubuntu-24.04" >> artifacts/build-info.txt
         echo "Build Type: ${{env.BUILD_TYPE}}" >> artifacts/build-info.txt
 
     - name: Upload build artifacts
