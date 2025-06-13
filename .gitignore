@@ -13,3 +13,4 @@ _deps
 *.swp
 setenv.sh
 build
+settings.json

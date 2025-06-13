@@ -7,7 +7,6 @@
 #include "marketdata.grpc.pb.h"
 #include "commontypes.h"
 
-
 using grpc::Channel;
 using namespace tinkoff::public_::invest::api::contract::v1;
 

@@ -19,11 +19,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: update and upgrade apt packages
-      run: sudo apt-get update && sudo apt-get upgrade -y
-
     - name: install dependencies
-      run: sudo apt-get install -y build-essential cmake autoconf libtool pkg-config libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc protobuf-compiler
+      run: sudo apt-get update && sudo apt-get upgrade -y
+           sudo apt-get install -y build-essential cmake autoconf libtool pkg-config libgrpc++-dev 
+           libprotobuf-dev protobuf-compiler-grpc protobuf-compiler
 
     - name: Get investAPI
       run: git submodule update --init --recursive --remote --merge
@@ -48,21 +47,19 @@ jobs:
 
     - name: Prepare artifacts
       run: |
-        mkdir -p artifacts
+        mkdir -p artifacts/build
         # Copy build libraries
-        cp build/*.so artifacts/ 2>/dev/null || true
-        cp build/*.a artifacts/ 2>/dev/null || true
-        # Copy executable samples if they exist
-        cp build/samples/* artifacts/ 2>/dev/null || true
+        cp build/*.so artifacts/build/ 2>/dev/null || true
+        cp build/*.a artifacts/build/ 2>/dev/null || true
         # Copy headers
-        cp *.h artifacts/ 2>/dev/null || true
-        cp build/*.h artifacts/ 2>/dev/null || true
+        mkdir -p artifacts/include
+        cp *.h artifacts/include/ 2>/dev/null || true
+        cp services/*.h artifacts/include/ 2>/dev/null || true
+        cp build/*.h artifacts/include/ 2>/dev/null || true
         # Create a summary of what was built
         echo "Build completed on $(date)" > artifacts/build-info.txt
         echo "Platform: ubuntu-22.04" >> artifacts/build-info.txt
         echo "Build Type: ${{env.BUILD_TYPE}}" >> artifacts/build-info.txt
-        echo "Files:" >> artifacts/build-info.txt
-        ls -la artifacts/ >> artifacts/build-info.txt
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -71,16 +68,3 @@ jobs:
         path: artifacts/
         retention-days: 30
         if-no-files-found: warn
-
-    - name: Upload library only
-      uses: actions/upload-artifact@v4
-      with:
-        name: tinkoff-invest-sdk-library-${{env.BUILD_TYPE}}
-        path: |
-          build/*.so
-          build/*.a
-          *.h
-          build/*.h
-        retention-days: 90
-        if-no-files-found: warn
-
