@@ -49,3 +49,41 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
 
+    - name: Prepare artifacts
+      run: |
+        mkdir -p artifacts
+        # Copy build libraries
+        cp build/*.so artifacts/ 2>/dev/null || true
+        cp build/*.a artifacts/ 2>/dev/null || true
+        # Copy executable samples if they exist
+        cp build/samples/* artifacts/ 2>/dev/null || true
+        # Copy headers
+        cp *.h artifacts/ 2>/dev/null || true
+        cp build/*.h artifacts/ 2>/dev/null || true
+        # Create a summary of what was built
+        echo "Build completed on $(date)" > artifacts/build-info.txt
+        echo "Platform: ubuntu-22.04" >> artifacts/build-info.txt
+        echo "Build Type: ${{env.BUILD_TYPE}}" >> artifacts/build-info.txt
+        echo "Files:" >> artifacts/build-info.txt
+        ls -la artifacts/ >> artifacts/build-info.txt
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tinkoff-invest-sdk-${{env.BUILD_TYPE}}-${{github.sha}}
+        path: artifacts/
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Upload library only
+      uses: actions/upload-artifact@v4
+      with:
+        name: tinkoff-invest-sdk-library-${{env.BUILD_TYPE}}
+        path: |
+          build/*.so
+          build/*.a
+          *.h
+          build/*.h
+        retention-days: 90
+        if-no-files-found: warn
+
