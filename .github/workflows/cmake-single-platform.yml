@@ -26,7 +26,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get upgrade -y
 
     - name: install dependencies
-      run: sudo apt-get instakll -y build-essential cmake autoconf libtool pkg-config libgrpc++-dev \
+      run: sudo apt-get install -y build-essential cmake autoconf libtool pkg-config libgrpc++-dev \
         libprotobuf-dev protobuf-compiler-grpc protobuf-compiler
 
     - name: Get investAPI
@@ -42,7 +42,7 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j$(nproc)
 
     - name: Test
       working-directory: ${{github.workspace}}/build
